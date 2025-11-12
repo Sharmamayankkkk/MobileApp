@@ -399,6 +399,21 @@ adb install android/app/build/outputs/apk/debug/app-debug.apk
 
 ## ❓ Troubleshooting
 
+### Build Error: "jlink exited with non-zero exit value 1"
+
+**Problem:** Android Gradle Plugin 8.0.0 has compatibility issues with Java 21's jlink tool
+
+**Solution:**
+This is already fixed in the latest code (Android Gradle Plugin updated to 8.1.4). If you still see this:
+1. Pull the latest changes: `git pull origin copilot/vscode1762930490058`
+2. Verify `android/build.gradle` has `com.android.tools.build:gradle:8.1.4`
+3. Clean and rebuild:
+   ```bash
+   cd android
+   ./gradlew clean
+   ./gradlew assembleDebug
+   ```
+
 ### Build Error: "invalid source release: 21"
 
 **Problem:** Gradle is not using Java 21

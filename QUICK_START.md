@@ -62,6 +62,9 @@ adb install android/app/build/outputs/apk/debug/app-debug.apk
 
 ## Common Issues
 
+**Error: jlink exited with non-zero exit value 1**
+→ Fixed in latest code (AGP 8.1.4). Pull latest changes and clean rebuild
+
 **Error: invalid source release: 21**
 → Set Gradle JDK to 21 in Android Studio settings
 
