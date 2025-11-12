@@ -6,13 +6,15 @@ A fun Flappy Bird-style game featuring Krishna from Hindu mythology, built with 
 
 - **[QUICK_START.md](QUICK_START.md)** - Quick reference card with essential commands
 - **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Complete step-by-step guide to build the APK
+- **[CLOUD_IDE_SETUP.md](CLOUD_IDE_SETUP.md)** - Setup guide for GitHub Codespaces, Gitpod, and cloud IDEs
 
 ## 📋 Prerequisites
 
 - Node.js and npm installed
 - Android Studio (for Android development)
 - **Java Development Kit (JDK) 21** (required by Capacitor 7.x)
-  - Download from: https://adoptium.net/ or https://www.oracle.com/java/technologies/downloads/
+  - **Local machine:** Download from https://adoptium.net/
+  - **Cloud IDE (Codespaces/Gitpod):** See [CLOUD_IDE_SETUP.md](CLOUD_IDE_SETUP.md) for SDKMAN/apt instructions
   - Verify with: `java -version` (should show version 21.x.x)
 
 ## 🚀 Getting Started

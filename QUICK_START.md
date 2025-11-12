@@ -1,7 +1,9 @@
 # ⚡ Quick Build Reference Card
 
 ## Prerequisites
-- ✅ Java 21 (JDK) - https://adoptium.net/
+- ✅ Java 21 (JDK)
+  - Local: https://adoptium.net/
+  - Cloud IDE: See [CLOUD_IDE_SETUP.md](CLOUD_IDE_SETUP.md)
 - ✅ Android Studio - https://developer.android.com/studio
 - ✅ Node.js & npm
 - ✅ Git
