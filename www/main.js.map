@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/main.js"],
-  "sourcesContent": ["// src/main.js\n// Minimal bootstrap for the Capacitor web app.\n// Keep this light \u2014 your existing index.html contains the game logic.\n\nconsole.log('Flappy Krishna: main.js loaded');\n\n// Optionally expose a helper object if you want to call native helpers later\nwindow.AppNative = {\n  platform() {\n    return navigator.userAgent;\n  }\n};"],
-  "mappings": "MAIA,QAAQ,IAAI,gCAAgC,EAG5C,OAAO,UAAY,CACjB,UAAW,CACT,OAAO,UAAU,SACnB,CACF",
-  "names": []
-}
