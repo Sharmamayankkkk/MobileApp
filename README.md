@@ -2,6 +2,11 @@
 
 A fun Flappy Bird-style game featuring Krishna from Hindu mythology, built with Capacitor for Android.
 
+## 📚 Documentation
+
+- **[QUICK_START.md](QUICK_START.md)** - Quick reference card with essential commands
+- **[BUILD_GUIDE.md](BUILD_GUIDE.md)** - Complete step-by-step guide to build the APK
+
 ## 📋 Prerequisites
 
 - Node.js and npm installed
