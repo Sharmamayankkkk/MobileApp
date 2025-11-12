@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+www/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Android
+android/app/build/
+android/app/release/
+android/.gradle/
+android/build/
+
+# Capacitor
+.capacitor/
