@@ -1,0 +1,23 @@
+{
+  "name": "flappy-krishna",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --outfile=www/main.js --minify --sourcemap",
+    "copy-html": "cp src/index.html www/index.html || powershell -Command \"Copy-Item src\\index.html www\\index.html\"",
+    "prepare-web": "npm run build && npm run copy-html",
+    "cap:init": "npx cap init \"Flappy Krishna\" com.yourname.flappykrishna --web-dir=www",
+    "cap:add:android": "npx cap add android",
+    "cap:copy": "npx cap copy",
+    "cap:open:android": "npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.0.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/core": "^7.4.4"
+  }
+}
