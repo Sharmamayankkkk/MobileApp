@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Krishna: Vrindavan Adventure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
+            font-family: 'Fredoka', sans-serif;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .interactive {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .hud-btn {
+            pointer-events: auto;
+            transition: transform 0.1s;
+        }
+        .hud-btn:active { transform: scale(0.9); }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Falling Leaves Animation */
+        .leaf {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background-color: #81C784;
+            border-radius: 2px 10px;
+            opacity: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div class="absolute top-4 left-4 z-30 flex gap-3 pointer-events-auto items-center">
+        <button id="mute-btn" class="hud-btn w-10 h-10 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white text-lg border border-white/50 shadow-lg hover:bg-white/40">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <div id="speed-indicator" class="hidden px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/30">
+            SPEED: <span id="speed-val">1.0x</span>
+        </div>
+    </div>
+
+    <div id="score-hud" class="absolute top-12 w-full text-center z-10 pointer-events-none hidden transition-transform duration-300">
+        <div class="text-7xl font-bold text-white drop-shadow-[0_4px_0_rgba(0,0,0,0.2)]" style="-webkit-text-stroke: 2px rgba(0,0,0,0.1);">
+            <span id="current-score">0</span>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="ui-layer bg-black/30 backdrop-blur-sm transition-opacity duration-500 pt-[10vh]">
+        <div class="animate-float text-center mb-8 relative z-20">
+            <h1 class="text-5xl md:text-7xl text-yellow-300 font-bold drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">Flappy Krishna</h1>
+            <p class="text-white text-lg drop-shadow-md opacity-90 mt-2">Vrindavan Adventure</p>
+        </div>
+        
+        <div class="glass-panel p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 border-b-8 border-yellow-400/50 z-20">
+            <div class="flex justify-center gap-6 mb-8 text-gray-700">
+                <div class="flex flex-col items-center group">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-hand-pointer text-xl text-blue-500"></i>
+                    </div>
+                    <span class="text-xs font-bold">Tap / Space</span>
+                </div>
+                <div class="flex flex-col items-center group">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-star text-xl text-yellow-600"></i>
+                    </div>
+                    <span class="text-xs font-bold">Collect Butter</span>
+                </div>
+            </div>
+            <button id="start-btn" class="interactive w-full px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-2xl font-bold rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all border-2 border-orange-300/50">
+                Start Divine Lila
+            </button>
+        </div>
+        
+        <!-- Leaves Container -->
+        <div id="leaves-container" class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none"></div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="ui-layer hidden bg-black/50 backdrop-blur-md">
+        <div class="glass-panel p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 border-4 border-white/60 animate-[bounce_0.5s_ease-out]">
+            <h2 class="text-4xl text-orange-600 font-bold mb-1">Ouch!</h2>
+            <p class="text-gray-500 text-sm mb-6">Mind the pots!</p>
+            
+            <div class="grid grid-cols-2 gap-4 my-6">
+                <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Score</p>
+                    <p id="final-score" class="text-4xl font-bold text-orange-500">0</p>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
+                    <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Best</p>
+                    <p id="best-score" class="text-4xl font-bold text-yellow-500">0</p>
+                    <p id="new-best-banner" class="text-xs font-bold text-green-500 mt-2 hidden animate-pulse">🎉 NEW BEST! 🎉</p>
+                </div>
+            </div>
+
+            <button id="restart-btn" class="interactive w-full px-8 py-4 bg-blue-500 text-white text-xl font-bold rounded-xl shadow-lg hover:bg-blue-600 hover:scale-105 transition-all">
+                Try Again
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Start Screen Animation (Leaves) ---
+    function createLeaf() {
+        const container = document.getElementById('leaves-container');
+        if (!container || document.getElementById('start-screen').classList.contains('hidden')) return;
+
+        const leaf = document.createElement('div');
+        leaf.classList.add('leaf');
+        
+        // Randomize starting position and animation properties
+        const startLeft = Math.random() * 100;
+        const duration = Math.random() * 3 + 4; // 4-7 seconds
+        const size = Math.random() * 10 + 10;
+        
+        leaf.style.left = startLeft + '%';
+        leaf.style.top = '-20px';
+        leaf.style.width = size + 'px';
+        leaf.style.height = size + 'px';
+        leaf.style.backgroundColor = Math.random() > 0.5 ? '#81C784' : '#AED581';
+        
+        // Inline animation for complex randomness
+        leaf.animate([
+            { transform: `translate(0, 0) rotate(0deg)`, opacity: 0 },
+            { opacity: 1, offset: 0.1 },
+            { opacity: 1, offset: 0.9 },
+            { transform: `translate(${Math.random()*100 - 50}px, 105vh) rotate(${Math.random()*360}deg)`, opacity: 0 }
+        ], {
+            duration: duration * 1000,
+            easing: 'linear',
+            iterations: 1
+        }).onfinish = () => leaf.remove();
+
+        container.appendChild(leaf);
+    }
+    
+    // Start spawning leaves
+    let leafInterval = setInterval(createLeaf, 400);
+
+    // --- Audio System ---
+    const AudioSys = {
+        synth: null,
+        reverb: null,
+        isMuted: false,
+        initialized: false,
+
+        async init() {
+            if (this.initialized) return;
+            await Tone.start();
+            
+            this.synth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.02, decay: 0.1, sustain: 0.1, release: 0.5 }
+            }).toDestination();
+            
+            this.reverb = new Tone.Reverb({ decay: 2, preDelay: 0.1 }).toDestination();
+            this.synth.connect(this.reverb);
+            
+            this.synth.volume.value = -8;
+            this.initialized = true;
+        },
+
+        toggleMute() {
+            this.isMuted = !this.isMuted;
+            Tone.Destination.mute = this.isMuted;
+            const icon = document.querySelector('#mute-btn i');
+            icon.className = this.isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        },
+
+        playJump() {
+            if (!this.initialized || this.isMuted) return;
+            const notes = ["C5", "E5", "G5", "A5"];
+            this.synth.triggerAttackRelease(notes[Math.floor(Math.random() * notes.length)], "16n");
+        },
+
+        playScore() {
+            if (!this.initialized || this.isMuted) return;
+            this.synth.triggerAttackRelease(["C6", "E6"], "32n");
+        },
+        
+        playBonus() {
+            if (!this.initialized || this.isMuted) return;
+            this.synth.triggerAttackRelease(["G5", "B5", "D6"], "16n");
+        },
+
+        playCrash() {
+            if (!this.initialized || this.isMuted) return;
+            this.synth.triggerAttackRelease(["C3", "F2"], "8n");
+        }
+    };
+
+    // --- Game Engine ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameState = {
+        running: false,
+        over: false,
+        frames: 0,
+        score: 0,
+        highScore: parseInt(localStorage.getItem('fk_highscore')) || 0,
+        scaleRatio: 1, 
+        speed: 0,
+        baseSpeed: 0,
+        isStartScreen: true
+    };
+
+    // --- Responsive Scaling ---
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gameState.scaleRatio = Math.min(canvas.height / 600, 1.5);
+        
+        if(!gameState.running && !gameState.over) {
+             gameState.baseSpeed = 2.2 * gameState.scaleRatio;
+             gameState.speed = gameState.baseSpeed;
+        }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function updateDifficulty() {
+        const difficultyFactor = Math.min(gameState.score * 0.02, 1.2); 
+        const targetSpeed = gameState.baseSpeed * (1 + difficultyFactor);
+        gameState.speed += (targetSpeed - gameState.speed) * 0.01;
+        const multiplier = (gameState.speed / gameState.baseSpeed).toFixed(1);
+        document.getElementById('speed-val').innerText = multiplier + "x";
+    }
+
+    // --- Entities ---
+
+    class Particle {
+        constructor(x, y, color, speedMulti = 1) {
+            this.x = x;
+            this.y = y;
+            this.radius = (Math.random() * 3 + 1) * gameState.scaleRatio;
+            this.color = color;
+            this.vx = (Math.random() - 0.5) * 8 * speedMulti;
+            this.vy = (Math.random() - 0.5) * 8 * speedMulti;
+            this.alpha = 1;
+            this.decay = Math.random() * 0.03 + 0.01;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += 0.1;
+            this.alpha -= this.decay;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, this.alpha);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+    let particles = [];
+    let floatingTexts = [];
+
+    class FloatingText {
+        constructor(x, y, text, color) {
+            this.x = x;
+            this.y = y;
+            this.text = text;
+            this.color = color || '#FFF';
+            this.vy = -1.5 * gameState.scaleRatio;
+            this.alpha = 1;
+            this.scale = 1;
+        }
+        update() {
+            this.y += this.vy;
+            this.alpha -= 0.015;
+            this.scale += 0.01;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, this.alpha);
+            ctx.translate(this.x, this.y);
+            ctx.scale(this.scale, this.scale);
+            
+            ctx.font = `bold ${24 * gameState.scaleRatio}px 'Fredoka', sans-serif`;
+            ctx.fillStyle = this.color;
+            ctx.shadowColor = "rgba(0,0,0,0.3)";
+            ctx.shadowBlur = 4;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            
+            ctx.strokeText(this.text, 0, 0);
+            ctx.fillText(this.text, 0, 0);
+            ctx.restore();
+        }
+    }
+
+    class CelestialBody {
+        constructor() {
+            this.x = canvas.width - (100 * gameState.scaleRatio);
+            this.y = 80 * gameState.scaleRatio;
+            this.radius = 40 * gameState.scaleRatio;
+        }
+        draw() {
+            const r = this.radius;
+            const gradient = ctx.createRadialGradient(this.x, this.y, r * 0.5, this.x, this.y, r * 2);
+            gradient.addColorStop(0, 'rgba(255, 255, 200, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 100, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#FFF9C4';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    const sun = new CelestialBody();
+
+    class BackgroundLayer {
+        constructor(speedMod, color, yOffset, isStartScreenAnimated = false) {
+            this.speedMod = speedMod;
+            this.color = color;
+            this.yOffset = yOffset; 
+            this.x = 0;
+            this.points = [];
+            for(let i=0; i<=20; i++) this.points.push(Math.random());
+            this.isStartScreenAnimated = isStartScreenAnimated;
+
+            if (isStartScreenAnimated) {
+                this.clouds = [];
+                for(let i=0; i<5; i++) {
+                    this.clouds.push({
+                        x: Math.random() * canvas.width * 2,
+                        y: Math.random() * (canvas.height * 0.4),
+                        radius: (30 + Math.random() * 40) * gameState.scaleRatio
+                    });
+                }
+            }
+        }
+        
+        update() {
+            if (this.isStartScreenAnimated && gameState.isStartScreen) {
+                this.clouds.forEach(cloud => {
+                    cloud.x -= 0.5 * gameState.scaleRatio; 
+                    if (cloud.x + cloud.radius * 2 < 0) {
+                        cloud.x = canvas.width + cloud.radius * 2 + Math.random() * 200;
+                        cloud.y = Math.random() * (canvas.height * 0.4);
+                    }
+                });
+            } else if (!gameState.isStartScreen) {
+                this.x -= gameState.speed * this.speedMod;
+                if (this.x <= -canvas.width) this.x = 0;
+            }
+        }
+
+        draw() {
+            if (this.isStartScreenAnimated && gameState.isStartScreen) {
+                this.clouds.forEach(cloud => {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+                    ctx.arc(cloud.x + cloud.radius * 0.6, cloud.y - cloud.radius * 0.5, cloud.radius * 0.8, 0, Math.PI * 2);
+                    ctx.arc(cloud.x + cloud.radius * 1.2, cloud.y, cloud.radius * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else if (!gameState.isStartScreen) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, canvas.height);
+                const segWidth = canvas.width / 10;
+                for(let loop=0; loop<2; loop++) {
+                    const xOff = this.x + (loop * canvas.width);
+                    for(let i=0; i<11; i++) {
+                        const px = xOff + (i * segWidth);
+                        const py = canvas.height - (this.yOffset * gameState.scaleRatio) - (this.points[i] * 40 * gameState.scaleRatio);
+                        if (i % 2 === 0) {
+                            ctx.lineTo(px, py); 
+                            ctx.arc(px + segWidth/2, py, segWidth/2, Math.PI, 0);
+                        } else {
+                            ctx.lineTo(px, py + 15);
+                        }
+                    }
+                }
+                ctx.lineTo(this.x + canvas.width * 2, canvas.height);
+                ctx.fill();
+            }
+        }
+    }
+    
+    const gameBgLayers = [
+        new BackgroundLayer(0.1, '#81D4FA', 120), 
+        new BackgroundLayer(0.4, '#4FC3F7', 60)
+    ];
+    // We use this only for clouds in the start screen
+    const startScreenClouds = new BackgroundLayer(0, '#FFFFFF', 0, true);
+
+    const krishna = {
+        x: 0, y: 0, w: 0, h: 0, velocity: 0, rotation: 0,
+        
+        reset() {
+            this.w = 35 * gameState.scaleRatio;
+            this.h = 35 * gameState.scaleRatio;
+            this.x = canvas.width * 0.2;
+            this.y = canvas.height / 2;
+            this.velocity = 0;
+            this.rotation = 0;
+        },
+
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            
+            let targetRot = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+            this.rotation += (targetRot - this.rotation) * 0.15;
+            ctx.rotate(this.rotation);
+
+            const scale = gameState.scaleRatio;
+            const pulse = Math.sin(gameState.frames * 0.1) * 2;
+            
+            // Aura
+            ctx.beginPath();
+            ctx.arc(0, 0, (22 + pulse) * scale, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = '#87CEEB';
+            ctx.beginPath(); ctx.arc(0, -4*scale, 12*scale, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(0, 8*scale, 10*scale, 8*scale, 0, 0, Math.PI*2); ctx.fill();
+
+            // Dhoti
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath(); ctx.arc(0, 8*scale, 10*scale, 0, Math.PI, false); ctx.fill();
+
+            // Face
+            ctx.fillStyle = '#1a1a1a'; 
+            ctx.beginPath(); ctx.arc(-4*scale, -4*scale, 1.5*scale, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(4*scale, -4*scale, 1.5*scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'red';
+            ctx.fillRect(-1*scale, -10*scale, 2*scale, 4*scale);
+
+            // Feather
+            ctx.save();
+            ctx.translate(0, -14*scale);
+            ctx.rotate(0.3);
+            ctx.fillStyle = '#2E8B57'; ctx.fillRect(0, 0, 2*scale, -10*scale);
+            ctx.fillStyle = '#000080'; ctx.beginPath(); ctx.ellipse(1*scale, -10*scale, 5*scale, 7*scale, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#40E0D0'; ctx.beginPath(); ctx.ellipse(1*scale, -10*scale, 3*scale, 5*scale, 0, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+
+            // Flute
+            ctx.fillStyle = '#8B4513';
+            ctx.save();
+            ctx.rotate(-0.5);
+            ctx.fillRect(-6*scale, 4*scale, 18*scale, 3*scale);
+            ctx.restore();
+
+            ctx.restore();
+        },
+        update() {
+            const gravity = 0.25 * gameState.scaleRatio;
+            this.velocity += gravity;
+            this.y += this.velocity;
+
+            if (this.y + this.h/2 >= canvas.height - (20 * gameState.scaleRatio)) gameOver();
+            if (this.y - this.h/2 <= 0) {
+                this.y = this.h/2;
+                this.velocity = 0;
+            }
+        },
+        jump() {
+            this.velocity = -6.5 * gameState.scaleRatio;
+            AudioSys.playJump();
+            for(let i=0; i<4; i++) particles.push(new Particle(this.x, this.y + 10, '#FFF', 0.5));
+        }
+    };
+
+    const obstacles = [];
+    const collectibles = [];
+
+    class Obstacle {
+        constructor() {
+            this.w = 60 * gameState.scaleRatio;
+            this.x = canvas.width;
+            const gapReduction = Math.min(gameState.score * 0.5, 40);
+            this.gap = (190 - gapReduction) * gameState.scaleRatio;
+            this.passed = false;
+            this.spawnedButter = false;
+
+            const minHeight = 50 * gameState.scaleRatio;
+            const groundHeight = 20 * gameState.scaleRatio;
+            const availableHeight = canvas.height - groundHeight - this.gap - (minHeight * 2);
+            
+            this.topH = minHeight + Math.random() * availableHeight;
+            this.bottomY = this.topH + this.gap;
+        }
+        update() { this.x -= gameState.speed; }
+        draw() {
+            const potH = 35 * gameState.scaleRatio;
+            const drawStack = (x, yStart, height, isTop) => {
+                const count = Math.ceil(height / potH);
+                if(isTop) {
+                    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(x + this.w/2, 0); ctx.lineTo(x + this.w/2, height); ctx.stroke();
+                }
+                for(let i=0; i<count; i++) {
+                    let py = isTop ? height - (i*potH) - potH/2 : yStart + height - (i*potH) - potH/2;
+                    if (isTop && py < -potH) continue;
+                    if (!isTop && py > yStart + height) continue;
+                    if (!isTop && py < yStart) continue;
+
+                    ctx.fillStyle = (i%2===0) ? '#D84315' : '#FF7043';
+                    const scale = isTop ? 1 : (i===0 ? 1.1 : 1);
+                    const pw = this.w * scale;
+                    const px = x + (this.w - pw)/2;
+
+                    ctx.beginPath(); ctx.ellipse(px + pw/2, py, pw/2, potH/2, 0, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#FFD54F'; ctx.fillRect(px + 5, py - 2, pw - 10, 4);
+                }
+            };
+            drawStack(this.x, 0, this.topH, true);
+            drawStack(this.x, this.bottomY, canvas.height - this.bottomY - (20*gameState.scaleRatio), false);
+        }
+    }
+
+    class Collectible {
+        constructor(x, y) {
+            this.x = x; this.y = y;
+            this.size = 25 * gameState.scaleRatio;
+            this.collected = false;
+            this.bobOffset = Math.random() * Math.PI;
+        }
+        update() {
+            this.x -= gameState.speed;
+            this.y += Math.sin(gameState.frames * 0.05 + this.bobOffset) * 0.5;
+        }
+        draw() {
+            if (this.collected) return;
+            ctx.save(); ctx.translate(this.x, this.y);
+            ctx.shadowBlur = 15; ctx.shadowColor = "yellow";
+            ctx.fillStyle = "#3E2723"; ctx.beginPath(); ctx.arc(0, 5, this.size/2, 0, Math.PI, false); ctx.fill();
+            ctx.fillStyle = "#FFF9C4"; ctx.beginPath(); ctx.arc(0, 0, this.size/2 - 2, 0, Math.PI, true); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 5, this.size/2 - 2, 0, Math.PI*0.2, false); ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    // --- Main Functions ---
+
+    function resetGame() {
+        resize();
+        gameState.score = 0; gameState.frames = 0;
+        gameState.running = false; gameState.over = false;
+        gameState.isStartScreen = false;
+        gameState.baseSpeed = 2.2 * gameState.scaleRatio;
+        gameState.speed = gameState.baseSpeed;
+        
+        krishna.reset();
+        obstacles.length = 0; collectibles.length = 0; particles.length = 0; floatingTexts.length = 0;
+
+        document.getElementById('current-score').innerText = '0';
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('score-hud').classList.remove('hidden');
+        document.getElementById('speed-indicator').classList.remove('hidden');
+        document.getElementById('new-best-banner').classList.add('hidden');
+    }
+
+    function startGame() {
+        AudioSys.init();
+        if(gameState.over) resetGame();
+        document.getElementById('start-screen').classList.add('hidden');
+        gameState.isStartScreen = false;
+        gameState.running = true;
+        gameState.over = false;
+        krishna.jump();
+        loop();
+    }
+
+    function gameOver() {
+        gameState.running = false; gameState.over = true;
+        AudioSys.playCrash();
+
+        let isNewBest = false;
+        if (gameState.score > gameState.highScore) {
+            gameState.highScore = gameState.score;
+            localStorage.setItem('fk_highscore', gameState.highScore);
+            isNewBest = true;
+        }
+
+        document.getElementById('final-score').innerText = gameState.score;
+        document.getElementById('best-score').innerText = gameState.highScore;
+        document.getElementById('score-hud').classList.add('hidden');
+        document.getElementById('speed-indicator').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.remove('hidden');
+
+        if (isNewBest && gameState.score > 0) {
+            document.getElementById('new-best-banner').classList.remove('hidden');
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#FFD700', '#FFA500', '#87CEEB'] });
+        }
+    }
+
+    function loop() {
+        if (!gameState.running) return;
+
+        updateDifficulty();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        sun.draw();
+        gameBgLayers.forEach(layer => { layer.update(); layer.draw(); });
+
+        const spawnRate = Math.floor(400 / (gameState.speed / gameState.scaleRatio)); 
+        if (gameState.frames % spawnRate === 0) obstacles.push(new Obstacle());
+
+        for(let i=obstacles.length-1; i>=0; i--) {
+            let obs = obstacles[i];
+            obs.update(); obs.draw();
+
+            if (!obs.spawnedButter && obs.x < canvas.width * 0.7) {
+                if (Math.random() > 0.35) { 
+                    collectibles.push(new Collectible(obs.x + obs.w/2, obs.topH + obs.gap/2));
+                }
+                obs.spawnedButter = true;
+            }
+
+            const buffer = 8 * gameState.scaleRatio;
+            if (krishna.x + krishna.w/2 - buffer > obs.x && krishna.x - krishna.w/2 + buffer < obs.x + obs.w) {
+                if (krishna.y - krishna.h/2 + buffer < obs.topH || krishna.y + krishna.h/2 - buffer > obs.bottomY) {
+                    gameOver();
+                }
+            }
+
+            if (!obs.passed && krishna.x > obs.x + obs.w) {
+                gameState.score++;
+                obs.passed = true;
+                document.getElementById('current-score').innerText = gameState.score;
+                AudioSys.playScore();
+                
+                // Milestone text
+                if (gameState.score % 5 === 0) {
+                     const phrases = ["Radhe Radhe!", "Jai Ho!", "Govinda!", "Beautiful!"];
+                     const text = phrases[Math.floor(Math.random() * phrases.length)];
+                     const colors = ["#FF4081", "#FFD700", "#00E676", "#40C4FF"];
+                     const color = colors[Math.floor(Math.random() * colors.length)];
+                     floatingTexts.push(new FloatingText(krishna.x, krishna.y - 40, text, color));
+                }
+            }
+
+            if (obs.x + obs.w < 0) obstacles.splice(i, 1);
+        }
+
+        for(let i=collectibles.length-1; i>=0; i--) {
+            let c = collectibles[i];
+            c.update(); c.draw();
+            const dist = Math.hypot(krishna.x - c.x, krishna.y - c.y);
+            if (dist < (krishna.w/2 + c.size/2)) {
+                gameState.score += 5;
+                document.getElementById('current-score').innerText = gameState.score;
+                AudioSys.playBonus();
+                
+                // Haribol Text
+                floatingTexts.push(new FloatingText(c.x, c.y - 20, "Haribol!", "#FFD700"));
+
+                confetti({ particleCount: 15, spread: 50, origin: { x: c.x / canvas.width, y: c.y / canvas.height }, colors: ['#FFD700', '#FFF'] });
+                for(let p=0; p<8; p++) particles.push(new Particle(c.x, c.y, '#FFD700'));
+                collectibles.splice(i, 1);
+            }
+            if (c.x < -50) collectibles.splice(i, 1);
+        }
+
+        ctx.fillStyle = '#66BB6A';
+        ctx.fillRect(0, canvas.height - (20*gameState.scaleRatio), canvas.width, 20*gameState.scaleRatio);
+
+        krishna.update(); krishna.draw();
+
+        for(let i=particles.length-1; i>=0; i--) {
+            let p = particles[i];
+            p.update(); p.draw();
+            if (p.alpha <= 0) particles.splice(i, 1);
+        }
+
+        for(let i=floatingTexts.length-1; i>=0; i--) {
+            let ft = floatingTexts[i];
+            ft.update(); ft.draw();
+            if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+        }
+
+        gameState.frames++;
+        requestAnimationFrame(loop);
+    }
+
+    // --- Input & Events ---
+    function handleInput(e) {
+        if(e.target.closest('button')) return;
+        if (e.type === 'keydown') {
+            if (e.code !== 'Space') return;
+            e.preventDefault();
+        }
+        if (gameState.running) {
+            krishna.jump();
+        } else if (!gameState.over && !document.getElementById('start-screen').classList.contains('hidden')) {
+            startGame();
+        }
+    }
+
+    window.addEventListener('keydown', handleInput);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
+    canvas.addEventListener('mousedown', handleInput);
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', (e) => { e.stopPropagation(); resetGame(); startGame(); });
+    document.getElementById('mute-btn').addEventListener('click', (e) => { e.stopPropagation(); AudioSys.toggleMute(); });
+
+    // Idle Animation (Start Screen)
+    krishna.reset();
+    function idle() {
+        if (gameState.running) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        sun.draw();
+        
+        // Draw animated clouds for start screen only if not running
+        if (gameState.isStartScreen) {
+            startScreenClouds.update();
+            startScreenClouds.draw();
+        }
+        // Static BG layers behind clouds
+        gameBgLayers.forEach(l => l.draw());
+
+        // Krishna bobbing
+        krishna.y = canvas.height/2 + Math.sin(Date.now()/400) * (10*gameState.scaleRatio);
+        krishna.draw();
+        
+        requestAnimationFrame(idle);
+    }
+    idle();
+
+</script>
+</body>
+</html>
