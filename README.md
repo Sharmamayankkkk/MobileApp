@@ -6,7 +6,9 @@ A fun Flappy Bird-style game featuring Krishna from Hindu mythology, built with 
 
 - Node.js and npm installed
 - Android Studio (for Android development)
-- Java Development Kit (JDK) 11 or higher
+- **Java Development Kit (JDK) 21** (required by Capacitor 7.x)
+  - Download from: https://adoptium.net/ or https://www.oracle.com/java/technologies/downloads/
+  - Verify with: `java -version` (should show version 21.x.x)
 
 ## 🚀 Getting Started
 
@@ -77,6 +79,15 @@ Then build and run the app from Android Studio.
 **Error: "Unable to find web assets"**
 - Make sure you've run `npm run prepare-web` first
 - Check that the `www/` directory exists and contains `index.html`
+
+**Error: "invalid source release: 21" or Java compilation errors**
+- This app requires **Java 21** (JDK 21) because it uses Capacitor 7.x
+- Check your Java version: `java -version`
+- Download JDK 21 from: https://adoptium.net/ or https://www.oracle.com/java/technologies/downloads/
+- In Android Studio, set the Gradle JDK to 21:
+  - File → Settings → Build, Execution, Deployment → Build Tools → Gradle
+  - Set "Gradle JDK" to version 21
+- If you still get errors after updating Java, try: `./gradlew clean` in the `android/` directory
 
 **Changes not reflected in the app**
 - Re-run `npm run prepare-web` to rebuild
